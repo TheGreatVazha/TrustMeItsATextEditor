@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Text Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Apply a dark theme to the body and a smooth transition */
+        body {
+            background-color: #000;
+            color: #d4d4d4;
+            font-family: 'Inter', 'Courier New', monospace;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            /* Change the cursor to a banana image with a default fallback */
+            cursor: url('https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f34c.svg'), default;
+        }
+
+        /* Style the contenteditable div as the text editor */
+        #editor {
+            height: 100vh;
+            width: 100vw;
+            padding: 2rem;
+            box-sizing: border-box;
+            outline: none;
+            caret-color: #d4d4d4;
+            line-height: 1.6;
+            font-size: 1.1rem;
+            white-space: pre-wrap;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            transition: opacity 1s ease-out; /* Smooth fade for the text */
+            /* Change the editor cursor to a standard text cursor */
+            cursor: text;
+        }
+
+        /* The water-like overlay that will sweep down the screen */
+        #water-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #00bfff; /* Bright blue-cyan */
+            transform: translateY(-100%); /* Start off-screen above */
+            transition: transform 1.5s ease-in-out;
+            z-index: 10; /* Make sure it's on top */
+            display: none; /* Initially hidden */
+        }
+
+        /* The new screen for the birthday wish */
+        #birthday-screen {
+            display: none; /* Initially hidden */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            z-index: 20;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            text-align: center;
+            animation: fadeIn 2s forwards;
+            padding: 2rem;
+            opacity: 0;
+            /* Added the banana cursor here */
+            cursor: url('https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f34c.svg'), default;
+        }
+
+        /* Animation to fade in the birthday screen */
+        @keyframes fadeInScreen {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        #birthday-screen.show {
+            animation: fadeInScreen 2s forwards;
+        }
+        
+        /* Happy Birthday text with a contrasting gradient */
+        #birthday-screen h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-image: linear-gradient(to right, #00bfff, #30d5c8, #00ff8c, #30d5c8, #00bfff);
+        }
+        
+        .birthday-image {
+            max-width: 90vw;
+            max-height: 60vh;
+            border-radius: 1rem;
+            border: 2px solid #ff6a00;
+            box-shadow: 0 0 10px #ff6a00;
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .birthday-image:hover {
+            transform: scale(1.05);
+            cursor: pointer; /* Add a pointer cursor to indicate it's clickable */
+        }
+        
+        .banana-tree-container {
+            position: absolute;
+            bottom: 20px;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+            z-index: 10;
+        }
+        
+        .banana-tree-left {
+            left: 20px;
+            animation: slideInLeft 2s forwards;
+        }
+        
+        .banana-tree-right {
+            right: 20px;
+            animation: slideInRight 2s forwards;
+        }
+        
+        .banana-tree-img {
+            width: 100px;
+            height: auto;
+        }
+
+        #tapestry-container {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 1rem;
+            animation: slideInLeft 2s forwards;
+        }
+        
+        #tapestry-container-right {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 1rem;
+            animation: slideInRight 2s forwards;
+        }
+        
+        @keyframes slideInLeft {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .tapestry {
+            width: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tapestry-stem {
+            width: 2px;
+            height: 50px;
+            background: linear-gradient(to bottom, #d4d4d4, #ff6a00);
+            box-shadow: 0 0 5px #ff6a00;
+        }
+
+        .tapestry-item {
+            font-size: 2rem;
+            margin-top: 0.5rem;
+            transition: transform 0.3s ease-in-out;
+        }
+        .tapestry-item:hover {
+            transform: scale(1.2);
+        }
+
+        /* Custom selection color */
+        ::selection {
+            background-color: #444;
+            color: #fff;
+        }
+
+        /* YouTube video player styles */
+        #youtube-player-container {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 30;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #youtube-player-container iframe {
+            width: 90%;
+            max-width: 800px;
+            height: 70%;
+            border-radius: 1rem;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+
+        #youtube-player-container .close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+        }
+
+        #youtube-player-container .close-btn:hover {
+            transform: rotate(90deg);
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <!-- The contenteditable div acts as the text editor -->
+    <div id="editor" contenteditable="true" spellcheck="false"></div>
+
+    <!-- The water overlay that will transition over the screen -->
+    <div id="water-overlay"></div>
+
+    <!-- The new birthday screen content -->
+    <div id="birthday-screen">
+        <img id="birthday-image" class="birthday-image" src="https://i.ibb.co/DDMP7b2H/Chat-GPT-Image-Aug-17-2025-12-46-31-AM.png" alt="Happy Birthday military theme image" onerror="this.src='https://placehold.co/800x600/333333/FFFFFF?text=Image+Not+Found'">
+        <h1>Happy Birthday</h1>
+        
+        <!-- Banana Trees on the left -->
+        <div class="banana-tree-container banana-tree-left">
+            <img class="banana-tree-img" src="https://cdn-icons-png.flaticon.com/512/17604/17604657.png" alt="Banana Tree">
+            <img class="banana-tree-img" src="https://cdn-icons-png.flaticon.com/512/17604/17604657.png" alt="Banana Tree">
+        </div>
+        
+        <!-- Banana Trees on the right -->
+        <div class="banana-tree-container banana-tree-right">
+            <img class="banana-tree-img" src="https://cdn-icons-png.flaticon.com/512/17604/17604657.png" alt="Banana Tree">
+            <img class="banana-tree-img" src="https://cdn-icons-png.flaticon.com/512/17604/17604657.png" alt="Banana Tree">
+        </div>
+
+        <!-- Hangings on the left -->
+        <div id="tapestry-container">
+            <div class="tapestry">
+                <div class="tapestry-stem"></div>
+                <span class="tapestry-item">🍌</span>
+            </div>
+            <div class="tapestry">
+                <div class="tapestry-stem"></div>
+                <span class="tapestry-item">💥</span>
+            </div>
+            <div class="tapestry">
+                <div class="tapestry-stem"></div>
+                <span class="tapestry-item">🍋</span>
+            </div>
+        </div>
+        
+        <!-- Hangings on the right -->
+        <div id="tapestry-container-right">
+            <div class="tapestry">
+                <div class="tapestry-stem"></div>
+                <span class="tapestry-item">🍌</span>
+            </div>
+            <div class="tapestry">
+                <div class="tapestry-stem"></div>
+                <span class="tapestry-item">💥</span>
+            </div>
+            <div class="tapestry">
+                <div class="tapestry-stem"></div>
+                <span class="tapestry-item">🍋</span>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- YouTube Video Player Container -->
+    <div id="youtube-player-container">
+        <button class="close-btn" id="close-video">&times;</button>
+        <iframe id="youtube-video" width="560" height="315" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+
+
+    <script>
+        // Get all necessary elements from the DOM
+        const editor = document.getElementById('editor');
+        const body = document.body;
+        const waterOverlay = document.getElementById('water-overlay');
+        const birthdayScreen = document.getElementById('birthday-screen');
+        const birthdayImage = document.getElementById('birthday-image');
+        const youtubePlayerContainer = document.getElementById('youtube-player-container');
+        const youtubeVideo = document.getElementById('youtube-video');
+        const closeVideoBtn = document.getElementById('close-video');
+
+        // The text to be used for replacement, as specified by the user.
+        const sourceText = `Case file #0825. Subject: Male. Zodiac: Virgo.
+
+The profile reads strangely. He treats family functions like active crime scenes, slicing with a precision that makes even the bravest attackers retreat. His most refined art form, polished to near-professional standards, remains crastination (not a pro ofc). Relationship status? Still running in single-player mode, with the co-op expansion stubbornly buffering. Recently, surveillance reports placed him inside a gym—though skeptics insist it’s a proxy to meet-a-mate.
+
+Criminal activity? None found. Unless you count surviving yet another lap around the sun.
+
+At last, the file yields a once-respected name: Dhanush.
+Verdict: Happy birthday, have a shit now. Or as Tony Stark once said after saving the world: “You ever tried shawarma? …I don’t know what it is, but I wanna try it.”`;
+
+        // Split the source text into an array of words
+        const sourceWords = sourceText.trim().split(/\s+/);
+        
+        let wordCount = 0;
+        let sourceIndex = 0;
+        const replaceInterval = 10; // The number of words to type before replacement.
+
+        /**
+         * Sets the cursor position to the end of the editor content.
+         * This is necessary after programmatically changing the text.
+         */
+        function moveCursorToEnd() {
+            const range = document.createRange();
+            const selection = window.getSelection();
+            range.selectNodeContents(editor);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            editor.focus();
+        }
+
+        /**
+         * The main event listener function for the editor.
+         */
+        function handleKeyDown(event) {
+            // Only trigger on spacebar
+            if (event.key === ' ') {
+                wordCount++;
+                
+                // If we've typed enough words, or if we're at the end of the source text, perform the replacement
+                if (wordCount === replaceInterval) {
+                    event.preventDefault();
+
+                    if (sourceIndex >= sourceWords.length) {
+                         // The source text has been fully used, trigger the wash away effect
+                        editor.removeEventListener('keydown', handleKeyDown);
+                        editor.contentEditable = "false";
+                        
+                        // Start the text fading out
+                        editor.style.opacity = '0';
+                        
+                         // Hide the cursor
+                         editor.style.caretColor = 'transparent';
+                         
+                         // Show the water overlay and trigger its transition
+                        waterOverlay.style.display = 'block';
+                        setTimeout(() => {
+                            waterOverlay.style.transform = 'translateY(0)';
+                        }, 50);
+
+                        // After the water transition, hide the old screen and show the new one
+                        setTimeout(() => {
+                            editor.style.display = 'none';
+                            waterOverlay.style.display = 'none';
+                            birthdayScreen.style.display = 'flex';
+                            birthdayScreen.classList.add('show');
+                        }, 2000); // This delay should match the water-overlay transition duration
+                        
+                        return;
+                    }
+                    
+                    const currentWords = editor.innerText.trim().split(/\s+/).filter(word => word.length > 0);
+                    const wordsBeforeReplacement = currentWords.slice(0, -replaceInterval).join(' ');
+                    const wordsToReplaceWith = sourceWords.slice(sourceIndex, sourceIndex + replaceInterval).join(' ');
+                    const newText = (wordsBeforeReplacement ? wordsBeforeReplacement + ' ' : '') + wordsToReplaceWith + ' ';
+                    
+                    editor.innerText = newText;
+                    
+                    wordCount = 0;
+                    sourceIndex += replaceInterval;
+                    
+                    moveCursorToEnd();
+                }
+            }
+        }
+        
+        // Add the event listener for the keydown event
+        editor.addEventListener('keydown', handleKeyDown);
+
+        // Add a placeholder to guide the user
+        editor.addEventListener('focus', () => {
+            if (editor.innerText.trim() === 'Start typing...') {
+                editor.innerText = '';
+            }
+        });
+
+        // Add a placeholder when the editor is empty
+        editor.addEventListener('blur', () => {
+            if (editor.innerText.trim() === '') {
+                editor.innerText = 'Start typing...';
+            }
+        });
+
+        // Event listener to handle the image click and show the video
+        birthdayImage.addEventListener('click', () => {
+            // Set the video source and show the player
+            youtubeVideo.src = "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1";
+            youtubePlayerContainer.style.display = 'flex';
+        });
+
+        // Event listener to close the video player
+        closeVideoBtn.addEventListener('click', () => {
+            // Hide the player and stop the video by clearing the source
+            youtubePlayerContainer.style.display = 'none';
+            youtubeVideo.src = "";
+        });
+
+        // Initialize the placeholder on page load
+        window.onload = () => {
+            editor.innerText = 'Start typing...';
+            moveCursorToEnd();
+        };
+
+    </script>
+</body>
+</html>
